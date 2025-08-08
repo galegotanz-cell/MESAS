@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vista A–D con encabezado fijo</title>
+  <style>
+    :root{
+      /* Ajustes rápidos */
+      --bodyHeight: 70vh;      /* Alto del área scrolleable */
+      --col1: 25%; --col2: 25%; --col3: 25%; --col4: 25%; /* Anchos de columnas */
+    }
+    *{ box-sizing: border-box; }
+    body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif; background:#fff; color:#111; }
+    .sheet-view{
+      width:100%; max-width:100%; overflow:hidden;
+      border:1px solid #e5e7eb; border-radius:8px; background:#fff;
+    }
+    .scroll{ position:relative; height:var(--bodyHeight); overflow-y:auto; overflow-x:hidden; }
+    .header{ position:sticky; top:0; z-index:2; background:#fff; box-shadow:0 1px 0 rgba(0,0,0,.06); }
+    table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+    colgroup col:nth-child(1){ width:var(--col1); }
+    colgroup col:nth-child(2){ width:var(--col2); }
+    colgroup col:nth-child(3){ width:var(--col3); }
+    colgroup col:nth-child(4){ width:var(--col4); }
+    td{
+      padding:8px 10px; border-bottom:1px solid #eee; vertical-align:top;
+      font-size:clamp(12px, 2.8vw, 16px); line-height:1.35;
+      word-break:break-word; overflow-wrap:anywhere; white-space:normal;
+      background:#fff;
+    }
+    .header td{ font-weight:600; background:#fafafa; }
+    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    @media (min-width:640px){ td{ font-size:14px; } }
+  </style>
+</head>
+<body>
+  <div class="sheet-view" role="region" aria-label="Tabla A–D con encabezado fijo">
+    <div id="container" class="scroll">
+      <div class="header">
+        <table id="headerTable" aria-label="Encabezado (filas 1–5)">
+          <colgroup><col><col><col><col></colgroup>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="body">
+        <table id="bodyTable" aria-label="Contenido (filas 6–229)">
+          <colgroup><col><col><col><col></colgroup>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // URL GViz: usa tu ID publicado y limita a A1:D229
+    // Si cambiás de hoja, ajustá gid y/o range.
+    const GVIZ_URL =
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vQVNeNi7qQE2PotMhuWitzIh9y8M0oFLPC3ng7blHdDLScjzpx9WQPmXan6tL-d11hfQqTYW0SHamnp/gviz/tq?gid=0&range=A1:D229&tqx=out:json";
+
+    async function load() {
+      const res = await fetch(GVIZ_URL, { cache: "no-store" });
+      const text = await res.text();
+      // Extrae el JSON de la respuesta GViz
+      const json = JSON.parse(text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1));
+      const rows = (json.table.rows || []).map(r =>
+        (r.c || []).map(c => c ? (c.f ?? c.v ?? "") : "")
+      );
+
+      const headerRows = rows.slice(0, 5);    // Filas 1–5 fijas
+      const bodyRows   = rows.slice(5);       // Filas 6–229
+
+      render(document.querySelector("#headerTable tbody"), headerRows);
+      render(document.querySelector("#bodyTable tbody"), bodyRows);
+    }
+
+    function render(tbody, data) {
+      const frag = document.createDocumentFragment();
+      data.forEach(r => {
+        const tr = document.createElement("tr");
+        for (let i = 0; i < 4; i++) {
+          const td = document.createElement("td");
+          td.textContent = (r[i] ?? "").toString();
+          tr.appendChild(td);
+        }
+        frag.appendChild(tr);
+      });
+      tbody.textContent = "";
+      tbody.appendChild(frag);
+    }
+
+    load().catch(err => {
+      document.querySelector("#bodyTable tbody").innerHTML =
+        `<tr><td>Error al cargar datos</td><td></td><td></td><td></td></tr>`;
+      console.error(err);
+    });
+  </script>
+</body>
+</html>
